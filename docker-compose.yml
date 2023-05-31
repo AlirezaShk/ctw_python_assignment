@@ -1,0 +1,52 @@
+version: '3.7'
+
+networks:
+  internal:
+    external: false
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: conf/containers/dev/py/Dockerfile
+    container_name: ${PROJECT_NAME}-backend
+    env_file:
+      - .env
+    command: python __main__.py
+    volumes:
+      - ./:${CONTAINER_WORKSPACE}
+    networks:
+      - internal
+    ports:
+      - ${SERVER_PORT}:${SERVER_PORT}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:10.5.12-focal
+    container_name: ${PROJECT_NAME}-db
+    ports:
+      - ${DB_CONTAINER_PORT}:3306
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PORT: 3306
+      SERVICE_NAME: ${DB_NAME}
+      MYSQL_ROOT_HOST: '%'
+    networks:
+      - internal
+    volumes:
+      - ./data/streaming/mysql:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "bash",
+          "-c",
+          "echo > /dev/tcp/localhost/3306"
+        ]
+      interval: 1s
+    restart: always
