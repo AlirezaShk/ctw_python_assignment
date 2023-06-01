@@ -1,5 +1,7 @@
 {
     "app": {
-        "database_engine_undefined": "Database Engine is not defined"
+        "database_engine_undefined": "Database Engine is not defined",
+        "api_key_not_found": "`api_key` file at `conf/api_key` is missing.",
+        "symbol_undefined": "Provided symbol is not defined within the system"
     }
 }

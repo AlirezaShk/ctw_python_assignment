@@ -3,3 +3,4 @@ data/streaming/*
 data/local/*
 data/log/*.log
 temp/*
+conf/api_key
