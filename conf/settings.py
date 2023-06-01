@@ -9,6 +9,7 @@ APP_ENV = os.getenv("APP_ENV")
 DEBUG = os.getenv("DEBUG") == "True"
 LOGS_DIR = os.getenv("LOGS_PATH")
 FIXTURES_DIR = os.getenv("FIXTURES_PATH")
+DB_DIR = os.getenv("DB_PATH")
 
 # - Database
 DB_HOST = os.getenv("DB_HOST")
