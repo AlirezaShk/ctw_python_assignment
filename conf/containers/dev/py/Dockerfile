@@ -14,7 +14,4 @@ RUN apt-get update
 RUN pip install --upgrade pip
 RUN pip install -r conf/requirements.txt
 
-RUN sed -i 's/\r$//g' conf/containers/dev/py/entrypoint.sh
-RUN chmod +x conf/containers/dev/py/entrypoint.sh
-
-ENTRYPOINT [ "conf/containers/dev/py/entrypoint.sh" ]
+CMD [ "tail", "-f", "/dev/null" ]
