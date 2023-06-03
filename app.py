@@ -9,6 +9,7 @@ from pathlib import Path
 from conf.settings import APP_ENV, LOGS_DIR
 from lib.db import DatabaseRouter
 from flask_cors import CORS
+from flask_caching import Cache
 
 
 dotenv.load_dotenv()
@@ -28,5 +29,10 @@ logging.basicConfig(
     datefmt='%m/%d/%Y %I:%M:%S %p'
 )
 
-# Database Connection
+# - Database Connection
 db = DatabaseRouter.getDatabaseClient(engine=os.getenv("DB_ENGINE"))(app)
+
+# - Cache
+app.config['CACHE_TYPE'] = 'SimpleCache'
+app.config['CACHE_DEFAULT_TIMEOUT'] = 300
+cache = Cache(app)
