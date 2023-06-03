@@ -4,7 +4,8 @@ from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.schema import UniqueConstraint
 import enum
 from sqlalchemy import Enum
-from typing import Set
+from typing import Set, List, Dict, Any
+from conf.settings import DEFAULT_DATE_FMT
 
 db_core = db.core
 
@@ -48,3 +49,35 @@ class FinancialData(db_core.Model):
             return f"`{cls.__tablename__}` ({', '.join(keys)})", keys
         keys = list(keys)
         return f"`{cls.__tablename__}` ({', '.join(keys)})", keys
+
+    def __eq__(self, other: object):
+        return (self.id == other.id is not None) or (
+            self.id == other.id and
+            self.symbol == other.symbol and
+            self.date == other.date and
+            self.open_price == other.open_price and
+            self.close_price == other.close_price and
+            self.volume == other.volume
+        )
+
+
+class FinancialDataSerializer:
+    @classmethod
+    def serialize(cls, objs: List[FinancialData], exclude: List[str] = []) -> List[Dict[str, Any]]:
+        return list(map(lambda x: cls.transform(x, exclude), objs))
+
+    @staticmethod
+    def transform(o: object, exclude: List[str]) -> Dict[str, Any]:
+        res = {
+            "id": o.id,
+            "symbol": o.symbol.name,
+            "date": o.date.strftime(DEFAULT_DATE_FMT),
+            "open_price": "%.1f" % o.open_price,
+            "close_price": "%.1f" % o.close_price,
+            "volume": o.volume,
+            "created_at": str(o.created_at),
+            "updated_at": str(o.updated_at)
+        }
+        for attr in exclude:
+            del res[attr]
+        return res

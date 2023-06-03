@@ -1,11 +1,11 @@
-from app import app as application, db
-from routes import init_api
+from app import app as application, db, api, cache
 from conf.settings import DEBUG, APP_PORT
-from model import FinancialData
+from routes import api as ns
 
-init_api()
+api.add_namespace(ns)
 
 with application.app_context():
+    cache.init_app(application)
     db.initialize()
 
 if __name__ == '__main__':

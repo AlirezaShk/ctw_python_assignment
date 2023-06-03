@@ -1,0 +1,9 @@
+{
+    "api": {
+        "fields": {
+            "date": "In format of YYYY-MM-DD"
+        },
+        "desc": "Operations on Financial Data",
+        "ok_resp": "Example of Successful Response."
+    }
+}

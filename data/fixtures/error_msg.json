@@ -1,7 +1,14 @@
 {
     "app": {
         "database_engine_undefined": "Database Engine is not defined",
-        "api_key_not_found": "`api_key` file at `conf/api_key` is missing.",
         "symbol_undefined": "Provided symbol is not defined within the system"
+    },
+    "api": {
+        "api_key_not_found": "`api_key` file at `conf/api_key` is missing.",
+        "page_oob": "Page out of Bounds",
+        "end<start": "`end_date` should not be earlier than `start_date`.",
+        "symb_undefined": "Provided symbol is not defined within the system.",
+        "E500": "Something went wrong.",
+        "E404_no_content": "No records found."
     }
 }

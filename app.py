@@ -1,7 +1,6 @@
 from flask import Flask
-from flask_restful import Api
-from flask_mysqldb import MySQL
-from __init__ import __proj_name__
+from flask_restx import Api
+from __init__ import __proj_name__, __version__
 import logging
 import dotenv
 import os
@@ -16,8 +15,15 @@ dotenv.load_dotenv()
 
 # Flask Initialization
 app = Flask(f"{__proj_name__}")
-api = Api(app)
+app.config['OPENAPI_VERSION'] = '3.0.2'
 CORS(app, origins=os.getenv("ALLOWED_HOSTS", "*").split(","))
+api = Api(
+    app,
+    title=f"{__proj_name__} REST API",
+    version=__version__,
+    prefix="/api",
+    doc="/api"
+)
 
 # Application Configuration
 # - Logger:
