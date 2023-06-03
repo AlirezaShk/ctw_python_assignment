@@ -1,25 +1,11 @@
-import sys
-import os
- 
-# getting the name of the directory
-# where the this file is present.
-current = os.path.dirname(os.path.realpath(__file__))
- 
-# Getting the parent directory name
-# where the current directory is present.
-parent = os.path.dirname(current)
- 
-# adding the parent directory to
-# the sys.path.
-sys.path.append(parent)
-
 import requests
 from model import FinancialData
 from app import cache
 from .logging import Loggable
-from .exceptions import SymbolUndefined
+from .exceptions import SymbolUndefinedError
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict
+from conf.settings import DEFAULT_DATE_FMT
 
 
 class DailyTimeSeriesRecord:
@@ -59,13 +45,13 @@ class AlphaVantageAPI:
         url = f'https://www.alphavantage.co/query?function={self.func}&datatype=json&symbol={symbol_code}&outputSize=compact&apikey={self.api_key}'
         return requests.get(url).json()
 
-    @cache.cached(60, key_prefix="vantage_ssymbol/%s")
+    @cache.memoize(60)
     def _standardize_symbol(self, symbol: str) -> str:
         try:
             return self.VALID_SYMBOLS[symbol].name
         except KeyError:
             if symbol not in self.VALID_SYMBOLS.as_set():
-                raise SymbolUndefined(symbol=symbol)
+                raise SymbolUndefinedError(symbol=symbol)
             else:
                 return symbol.name
 
@@ -77,7 +63,7 @@ class AlphaVantageAPI:
         res = []
         parser = self._get_parser()
         for i in range(self.DEPRECATION_LIMIT_DAYS):
-            key = date_cursor.strftime("%Y-%m-%d")
+            key = date_cursor.strftime(DEFAULT_DATE_FMT)
             try:
                 res.append(
                     parser(record=time_series_data[key],

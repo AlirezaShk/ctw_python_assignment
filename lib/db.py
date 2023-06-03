@@ -1,9 +1,11 @@
-from typing import List
+from typing import List, Dict
 from abc import ABC, abstractmethod
-from .exceptions import DatabaseEngineUndefined
+from .exceptions import DatabaseEngineUndefinedError
 from conf.settings import FIXTURES_DIR, DB_HOST, DB_NAME, DB_PASSWORD, DB_USER, DB_PORT, DB_DIR
 from pathlib import Path
 from flask_sqlalchemy import SQLAlchemy, model
+from sqlalchemy.sql import text
+from conf.settings import MAX_BULK_OPERATIONS
 
 
 def get_schema_file():
@@ -19,50 +21,86 @@ class BaseDatabase(ABC):
 
 
 class SQLAlchemyDatabase(BaseDatabase):
+    MAX_BULK_OPERATIONS = MAX_BULK_OPERATIONS
+
     def initialize(self):
-        self.conn.create_all()
+        self.core.init_app(self.core.app)
+        self.core.create_all()
 
     def execute(self, querys: List[str]) -> None:
-        cursor = self.conn.connection.cursor()
         for query in querys:
-            cursor.execute(query)
-        self.conn.connection.commit()
-        cursor.close()
+            self.core.session.execute(text(query))
+        self.commit()
 
-    def enqueue(self, obj: model.DefaultMeta) -> None:
-        self.conn.session.add(obj)
+    def enqueue(self, obj: model.DefaultMeta, upsert=False) -> None:
+        if upsert:
+            self.core.session.merge(obj)
+        else:
+            self.core.session.add(obj)
 
     def commit(self):
-        self.conn.session.commit()
-        self.conn.session.flush()
-
+        self.core.session.commit()
+        self.core.session.flush()
 
 
 class SQLite(SQLAlchemyDatabase):
-    def __init__(self, app):
+    def __init__(self, app: object, path: str = DB_DIR):
         app.config['SQLALCHEMY_DATABASE_URI'] = SQLite.conncetion_uri(
-            path=DB_DIR
+            path=path
         )
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        self.conn = SQLAlchemy(app)
+        self.core = SQLAlchemy(app)
 
     @staticmethod
     def conncetion_uri(path):
         return f"sqlite:///{Path(path, 'sqlite.db')}"
 
+    def bulk_upsert(self, cls: type, attrs: List[Dict]):
+        table_statement, cols = cls.as_sql_table(only_required=True)
+        # selecting table and operation
+        definition = f"INSERT INTO {table_statement} VALUES "
+        # duplication handling
+        unique_cols = list(map(lambda x: x.name, cls.__table_args__[0].columns))
+        duplication = f" ON CONFLICT({', '.join(unique_cols)}) DO UPDATE SET {', '.join((f'{col}=EXCLUDED.{col}' for col in cols))}"
+        # values
+        values = ""
+        for i, attr in enumerate(attrs):
+            values += "('" + "', '".join((str(attr[col]) for col in cols)) + "'), "
+            if i % self.MAX_BULK_OPERATIONS == 0:
+                self.execute([definition + values[:-2] + duplication])
+                values = ""
+        if len(values) > 6:
+            self.execute([definition + values[:-2] + duplication])
+
 
 class MySQL(SQLAlchemyDatabase):
-    def __init__(self, app):
+    def __init__(self, app: object):
         app.config['SQLALCHEMY_DATABASE_URI'] = MySQL.conncetion_uri(
             username=DB_USER, password=DB_PASSWORD,
             host=DB_HOST, port=DB_PORT, database_name=DB_NAME
         )
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        self.conn = SQLAlchemy(app)
+        self.core = SQLAlchemy(app)
 
     @staticmethod
-    def conncetion_uri(username, password, host, port, database_name):
+    def conncetion_uri(username: str, password: str, host: str, port: int | str, database_name: str) -> str:
         return f"mysql://{username}:{password}@{host}:{port}/{database_name}"
+
+    def bulk_upsert(self, cls: type, attrs: List[Dict]) -> None:
+        table_statement, cols = cls.as_sql_table()
+        # selecting table and operation
+        definition = f"INSERT INTO {table_statement} VALUES "
+        # duplication handling
+        duplication = f" ON DUPLICATE KEY UPDATE {', '.join((f'{col}=VALUES({col})' for col in cols))}"
+        # values
+        values = ""
+        for i, attr in enumerate(attrs):
+            values += "('" + "', '".join((str(attr[col]) for col in cols)) + "'), "
+            if i % self.MAX_BULK_OPERATIONS == 0:
+                self.execute([definition + values[:-2] + duplication])
+                values = ""
+        if len(values) > 6:
+            self.execute([definition + values[:-2] + duplication])
 
 
 class DatabaseRouter:
@@ -74,4 +112,4 @@ class DatabaseRouter:
             case "sqlite":
                 return SQLite
             case _:
-                raise DatabaseEngineUndefined(engine_name=engine)
+                raise DatabaseEngineUndefinedError(engine_name=engine)

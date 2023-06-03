@@ -1,3 +1,4 @@
+from typing import Optional
 import logging
 
 
@@ -7,8 +8,13 @@ class Loggable:
 
     def __call__(self, *args):
         def wrapper(*_args, **_kwargs):
-            self.logger.info(f".{args[0].__name__}({_args, *_kwargs.items()})")
-            return args[0](*_args, **_kwargs)
+            try:
+                val = args[0](*_args, **_kwargs)
+                self.logger.info(f".{args[0].__name__}({_args, *_kwargs.items()}) => {val}")
+                return val
+            except BaseException as e:
+                self.logger.info(f".{args[0].__name__}({_args, *_kwargs.items()})")
+                raise e
         return wrapper
 
 
@@ -18,21 +24,24 @@ class Loggable:
 
 
 class BasicErrorHandler(Loggable):
-    def __init__(self, package_name: str, expectedErrClass: type, rethrow: bool = False):
+    def __init__(self, package_name: str, expectedErrClass: type, rethrow_as: Optional[type] = None):
         super().__init__(package_name)
         self.expectedErrClass = expectedErrClass
-        self.rethrow = rethrow
+        self.rethrow_as = rethrow_as
 
     def __call__(self, *args):
         func = super().__call__(*args)
 
         def wrapper(*_args):
-            print(_args)
             try:
                 return func(*_args)
             except self.expectedErrClass as e:
                 self.logger.error(str(e))
-                if self.rethrow: raise e
+                if self.rethrow_as:
+                    if self.rethrow_as == self.expectedErrClass:
+                        raise e
+                    else:
+                        raise self.rethrow_as
         return wrapper
 
 
