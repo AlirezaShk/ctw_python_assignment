@@ -1,0 +1,25 @@
+{
+    "Meta Data": {},
+    "Time Series (Daily)": {
+        "2023-06-02": {
+            "1. open": "130.38",
+            "2. high": "133.12",
+            "3. low": "130.15",
+            "4. close": "132.42",
+            "5. adjusted close": "132.42",
+            "6. volume": "5375796",
+            "7. dividend amount": "0.0000",
+            "8. split coefficient": "1.0"
+        },
+        "2023-06-01": {
+            "1. open": "128.44",
+            "2. high": "130.145",
+            "3. low": "127.78",
+            "4. close": "129.82",
+            "5. adjusted close": "129.82",
+            "6. volume": "4136086",
+            "7. dividend amount": "0.0000",
+            "8. split coefficient": "1.0"
+        }
+    }
+}
