@@ -23,3 +23,8 @@ class ApiKeyNotFoundError(FileNotFoundError):
 class SymbolUndefinedError(ValueError):
     def __init__(self, symbol: str):
         super().__init__(f"{err_msg['app']['symbol_undefined']}: {symbol}")
+
+
+class PageOutofBoundsError(IndexError):
+    def __init__(self, asked: int, max_: int):
+        super().__init__(f"{err_msg['api']['page_oob']}: {asked} out of {max_}")
