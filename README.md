@@ -1,228 +1,152 @@
-# Take-Home Assignment
+# Overview
 
-The goal of this take-home assignment is to evaluate your abilities to use API, data processing and transformation, SQL, and implement a new API service in Python.
+## Introduction
 
-You should first fork this repository, and then send us the code or the url of your forked repository via email.
+A stock data storage and statistical calculator application with Flask as the framework, SQLAlchemy as the Database Interface, MySQL as the production environment Database.
 
-**Please do not submit any pull requests to this repository.**
+For more information on the API you can refer to the Swagger generate OpenAPI documentation:
+- Latest API documentation is provided in the `conf/api.swagger.json`
+- Online Swagger UI is reachable via [here](http://localhost:5000/api).
 
-You need to perform the following **Two** tasks:
+## Commands
 
-## Task1
-### Problem Statement:
-1. Retrieve the financial data of Two given stocks (IBM, Apple Inc.)for the most recently two weeks. Please using an free API provider named [AlphaVantage](https://www.alphavantage.co/documentation/) 
-2. Process the raw API data response, a sample output after process should be like:
+**Start Application**
 ```
-{
-    "symbol": "IBM",
-    "date": "2023-02-14",
-    "open_price": "153.08",
-    "close_price": "154.52",
-    "volume": "62199013",
-},
-{
-    "symbol": "IBM",
-    "date": "2023-02-13",
-    "open_price": "153.08",
-    "close_price": "154.52",
-    "volume": "59099013"
-},
-{
-    "symbol": "IBM",
-    "date": "2023-02-12",
-    "open_price": "153.08",
-    "close_price": "154.52",
-    "volume": "42399013"
-},
-...
-``` 
-3. Insert the records above into a table named `financial_data` in your local database, column name should be same as the processed data from step 2 above (symbol, date, open_price, close_price, volume) 
+docker compose -f ./docker-compose.prod.yml build
+docker compose -f ./docker-compose.prod.yml up -d
+```
 
+The following commands must all be used inside the `backend` container.
 
-## Task2
-### Problem Statement:
-1. Implement an Get financial_data API to retrieve records from `financial_data` table, please note that:
-    - the endpoint should accept following parameters: start_date, end_date, symbol, all parameters are optional
-    - the endpoint should support pagination with parameter: limit and page, if no parameters are given, default limit for one page is 5
-    - the endpoint should return an result with three properties:
-        - data: an array includes actual results
-        - pagination: handle pagination with four properties
-            
-            - count: count of all records without panigation
-            - page: current page index
-            - limit: limit of records can be retrieved for single page
-            - pages: total number of pages
-        - info: includes any error info if applies
+**Run Tests**
+```
+pytest -vs
+```
+
+**Fetch Last 2 Weeks Data from AlphaVantageAPI**
+```
+python get_raw_data.py
+```
+
+## Methodologies Used
+
+**Overall**
+
+I used Flask for this project, because the requested project has simple APIs, services, a single model (a single Data Domain), and overall seems like a light weight project.
+
+I created 2 separate environments, DEV and PROD, each can be separately configured with their `docker-compose.yml`, `Dockerfile` and `.env` files.
+
+The [TIME_SERIES_DAILY_ADJUSTED](https://www.alphavantage.co/documentation/#dailyadj) function of AlphaVantage was used to implement the core of the API calling of this project. A client interface was created for communicating with the external API service. This interface class (provided in the `lib/avantage_api.py`) is configurable and easily extendable if other functionalities of the AlphaVantageAPI is needed. 
+
+---
+
+**Performance Optimizers**
+
+The project API endpoints needed to support a peak of 100QPS, so in order to accommodate such high API calls:
+- Caching and memoization techniques were used to reduce the computation cost of some procedures in the application.
+- Used SQLAlchemy as the interface for communicating with the database; because:
+    > SQLAlchemy includes several connection pool implementations... To maintain long running connections in memory for efficient re-use, as well as to provide management for the total number of connections an application might use simultaneously...\
+    > ([source](https://docs.sqlalchemy.org/en/20/core/pooling.html))
     
+    This could be used to reduce the number of times connections to the database are recreated.
 
-Sample Request:
-```bash
-curl -X GET 'http://localhost:5000/api/financial_data?start_date=2023-01-01&end_date=2023-01-14&symbol=IBM&limit=3&page=2'
+When calling the [TIME_SERIES_DAILY_ADJUSTED](https://www.alphavantage.co/documentation/#dailyadj) endpoint, the optional parameter `outputSize` is set to `compact` to reduce the memory and network load.\
+> By default, outputsize=compact. Strings compact and full are accepted with the following specifications: compact returns only the latest 100 data points; full returns the full-length time series of 20+ years of historical data. The "compact" option is recommended if you would like to reduce the data size of each API call.
 
-```
-Sample Response:
-```
-{
-    "data": [
-        {
-            "symbol": "IBM",
-            "date": "2023-01-05",
-            "open_price": "153.08",
-            "close_price": "154.52",
-            "volume": "62199013",
-        },
-        {
-            "symbol": "IBM",
-            "date": "2023-01-06",
-            "open_price": "153.08",
-            "close_price": "154.52",
-            "volume": "59099013"
-        },
-        {
-            "symbol": "IBM",
-            "date": "2023-01-09",
-            "open_price": "153.08",
-            "close_price": "154.52",
-            "volume": "42399013"
-        }
-    ],
-    "pagination": {
-        "count": 20,
-        "page": 2,
-        "limit": 3,
-        "pages": 7
-    },
-    "info": {'error': ''}
-}
+For the current scope, we only need data for the past 14 days (max of 10 data points per calling); so we don't need any more data than that.
 
-```
+---
 
-2. Implement an Get statistics API to perform the following calculations on the data in given period of time:
-    - Calculate the average daily open price for the period
-    - Calculate the average daily closing price for the period
-    - Calculate the average daily volume for the period
+**Tests**
 
-    - the endpoint should accept following parameters: start_date, end_date, symbols, all parameters are required
-    - the endpoint should return an result with two properties:
-        - data: calculated statistic results
-        - info: includes any error info if applies
+I created the relevant test files and test cases for the application in the `tests` directory. The testing strategies implemented were:
+- Code Quality Testing: Used flake8 as code linter for testing code quality. Also made sure that the PROD container image will not be built unless the linter validates the quality of the codes.
+- Unit Testing: Created the unit tests for separate modules such as the `FinancialData` model.
+- Functional Testing: Created test cases for when using each feature (services provided in `financial` directory for example) in the application.
+- Integration Testing: Created test cases for calling the `get_raw_data` script, and the API endpoints generated.
 
-Sample request:
-```bash
-curl -X GET http://localhost:5000/api/statistics?start_date=2023-01-01&end_date=2023-01-31&symbol=IBM
+---
 
-```
-Sample response:
-```
-{
-    "data": {
-        "start_date": "2023-01-01",
-        "end_date": "2023-01-31",
-        "symbol": "IBM",
-        "average_daily_open_price": 123.45,
-        "average_daily_close_price": 234.56,
-        "average_daily_volume": 1000000
-    },
-    "info": {'error': ''}
-}
+**Utils**
+Python native logger was created and separate files dedicated to the runtime environment were used. Core procedures all are logged to the `data/log/*.log`.
 
-```
+`data` directory contains all the data used by the application:
+- `data/fixtures`: Keeps constant files that act as textual variable holders.
+- `data/streaming`: Keeps the database files.
+- `data/log`: Keeps the application logs.
 
-## What you should deliver:
-Directory structure:
-```
-project-name/
-├── model.py
-├── schema.sql
-├── get_raw_data.py
-├── Dockerfile
-├── docker-compose.yml
-├── README.md
-├── requirements.txt
-└── financial/<Include API service code here>
+Fixture loaders were also defined in the `lib/utils.py`, to follow DRY principle.
 
-```
+---
 
-1. A `get_raw_data.py` file in root folder
+**Docs**
 
-    Action: 
-    
-    Run 
-    ```bash
-    python get_raw_data.py
-    ```
+Important modules, classes, and complex functions have been documented with DocStrings and comments.
 
-    Expectation: 
-    
-    1. Financial data will be retrieved from API and processed,then insert all processed records into table `financial_data` in local db
-    2. Duplicated records should be avoided when executing get_raw_data multiple times, consider implementing your own logic to perform upsert operation if the database you select does not have native support for such operation.
+Also for API Specifications, Swagger OpenAPI Documentation has been used (generated automatically by [Flask-RestX](https://flask-restx.readthedocs.io/)).
 
-2. A `schema.sql` file in root folder
-    
-    Define schema for financial_data table, if you prefer to use an ORM library, just **ignore** this deliver item and jump to item3 below.
 
-    Action: Run schema definition in local db
+### Python Packages Used
+- python-dotenv==1.0.0: For loading the `.env` files.
+- flask==2.3.2: As the project light weight framework.
+- flask-restx==1.1.0: As the project REST framework.
+- flask_mysqldb==1.0.1: Driver for interacting with MySQL through Flask.
+- Flask-SQLAlchemy==3.0.2: As the project Database Interface.
+- flask-cors==3.0.10: CORS Protection.
+- Flask-Caching==2.0.2: For caching purposes.
+- pytest==7.3.1: For writing and executing test cases.
+- faker==18.10.1: For generating random variables for test cases.
+- mock==5.0.2: For mocking method calls during tests.
+- requests==2.28.2: For sending HTTP requests.
+- werkzeug==2.3.4: Flask's default WSGI server.
+- webargs==8.2.0: For parsing and validating HTTP request objects, while using flask.
+- pandas==1.5.3: For statistical data operations. No version specified.
 
-    Expectation: A new table named `financial_data` should be created if not exists in db
+## Improvement Points
 
-3. (Optional) A `model.py` file: 
-    
-    If you perfer to use a ORM library instead of DDL, please include your model definition in `model.py`, and describe how to perform migration in README.md file
+### Within Scope
 
-4. A `Dockerfile` file in root folder
+**High Priority**
+- Decorate _all_ responses from the API calls to adhere to the desired response format.\
+    At the current state of the application, if there's an input validation error, the Flask-RESTX framework will respond with an automatic format and there's no error message decoration. This could probably be fixed with more tweaking but it was not pursued due to time restrictions.
+- Decorate _404 not found_ responses to the endpoints that are not defined, and to the endpoints that raise it due to content not found.
+- Migrate from static application creation to Application Creator Factory design. This will supply the application with a flexible configurable feature. More on that [here](https://flask.palletsprojects.com/en/2.3.x/patterns/appfactories/?highlight=factory). This design pattern was not used for the current project because of time restrictions.
 
-    Build up your local API service
+**Others**
+- Attend to _TODO_ tasks that are marked in comments throughout the project.
+- Add test cases for the `lib.utils`, `lib.db` modules.
+- Fix the `bulk_upsert` for `lib.db.SQLite` Database class to enable `bulk_upsert` from DEV ENV.
 
-5. A `docker-compose.yml` file in root folder
+### Out of Scope
 
-    Two services should be defined in docker-compose.yml: Database and your API
+The following improvement points were not requested, nor were they relevant to the current scope of design and implementation of the project. They could be added in future revisions/updates to add more flexibility or additional features to the project:
 
-    Action:
+- Add STG ENV.
+- Read `api_key` from a CDN instead of a local file. This could be implemented as a sort of a Factory that will detect and load it locally or from a remote CDN, based on the input arguments.
+- Add a standardized protocol for APIs, using a tool such as [gRPC](https://grpc.io/).
+- Add OAuth2 security to the APIs.
+- Add stricter CORS to the APIs.
+- Add a production-level server such as [nginx](https://www.nginx.com/) using [gunicorn](https://gunicorn.org/) to the PROD ENV configuration and docker services.
+- Add a Dockerfile for PROD MySQL container, and copy a custom configuration/options file to the container at `/etc/my.cnf`
+- Add a better Caching service; I suggest [Redis](https://redis.io/).
+- If the amount of data is going to be very large, I suggest horizontal sharding of the database. This way the read/write load will be distributed and availability would increase.
+- We could use python multi-threading and multi-processing to parallelize the information processing steps.
 
-    ```bash
-    docker-compose up
-    ```
 
-    Expectation:
-    Both database and your API service is up and running in local development environment
+# Developer Notes
+## Total Hours Spent on the Project
 
-6. A `financial` sub-folder:
+- 31/05: 4H (2H Research + 2H Development)
+- 01/06: 2H
+- 02/06: 6H (2H Research + 4H Development)
+- 03/06: 6H
+- 04/06: 9H (2H Research + 7H Development)
+- Total: 27H (6H Research + 21H Development)
 
-    Put all API implementation related codes in here
+## Final Remarks
 
-7. `README.md`: 
+This was the first application I have ever developed with Flask framework; basically I started learning this framework, as I started developing this project (I usually develop my projects with Django, but this project was so light-weight and small that Django would've been an overkill). I hope that it is satisfactory according to your standards.
 
-    You should include:
-    - A brief project description
-    - Tech stack you are using in this project
-    - How to run your code in local environment
-    - Provide a description of how to maintain the API key to retrieve financial data from AlphaVantage in both local development and production environment.
+I'm always happy to learn and receiving feedback is an important step in the learning process, so please give me feedback on the project.
 
-8. A `requirements.txt` file:
-
-    It should contain your dependency libraries.
-
-## Requirements:
-
-- The program should be written in Python 3.
-- You are free to use any API and libraries you like, but should include a brief explanation of why you chose the API and libraries you used in README.
-- The API key to retrieve financial data should be stored securely. Please provide a description of how to maintain the API key from both local development and production environment in README.
-- The database in Problem Statement 1 could be created using SQLite/MySQL/.. with your own choice.
-- The program should include error handling to handle cases where the API returns an error or the data is not in the correct format.
-- The program should cover as many edge cases as possible, not limited to expectations from deliverable above.
-- The program should use appropriate data structures and algorithms to store the data and perform the calculations.
-- The program should include appropriate documentation, including docstrings and inline comments to explain the code.
-
-## Evaluation Criteria:
-
-Your solution will be evaluated based on the following criteria:
-
-- Correctness: Does the program produce the correct results?
-- Code quality: Is the code well-structured, easy to read, and maintainable?
-- Design: Does the program make good use of functions, data structures, algorithms, databases, and libraries?
-- Error handling: Does the program handle errors and unexpected input appropriately?
-- Documentation: Is the code adequately documented, with clear explanations of the algorithms and data structures used?
-
-## Additional Notes:
-
-You have 7 days to complete this assignment and submit your solution.
+Thank you for your time and consideration.
