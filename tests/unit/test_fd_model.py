@@ -1,5 +1,7 @@
+import pytest
 from model import FinancialData, FinancialDataSerializer
 from sqlalchemy.dialects.mysql import types
+from lib.exceptions import SymbolUndefinedError
 from sqlalchemy.sql import sqltypes
 from tests.factories.financial_data import FinancialData as FDFactory
 from conf.settings import DEFAULT_DATE_FMT
@@ -36,6 +38,12 @@ def test_fd_attrs():
     assert not FinancialData.created_at.nullable
     assert isinstance(FinancialData.updated_at.type, sqltypes.DateTime)
     assert not FinancialData.updated_at.nullable
+
+
+def test_fd_validation():
+    subject = (lambda: FinancialData(symbol="X"))
+    with pytest.raises(SymbolUndefinedError):
+        subject()
 
 
 def test_fd_serializer():
