@@ -1,16 +1,34 @@
+"""
+The FinancialData model represents the stock market data, founded on: https://www.alphavantage.co/documentation
+
+The defined symbols are: IBM, AAPL
+"""
+
 from app import db, cache
 from sqlalchemy.sql import func
+from sqlalchemy.orm import validates
 from sqlalchemy.dialects.mysql import INTEGER
 from sqlalchemy.schema import UniqueConstraint
 import enum
 from sqlalchemy import Enum
-from typing import Set, List, Dict, Any
+from typing import Set, List, Dict, Any, Optional
 from conf.settings import DEFAULT_DATE_FMT
+from lib.exceptions import SymbolUndefinedError
 
 db_core = db.core
 
 
 class FinancialData(db_core.Model):
+    """Represents a stock market data.
+
+    Table: `financial_data`
+    PK: id (BigInt, AutoInc)
+    Index:
+        - PK
+        - Unique Constraint on (`symbol`, `date`)
+    Validates:
+        - `symbol`
+    """
     __tablename__ = 'financial_data'
     __table_args__ = (UniqueConstraint('symbol', 'date', name='unique_symbol_per_date_index'),)
 
@@ -59,6 +77,25 @@ class FinancialData(db_core.Model):
             self.close_price == other.close_price and
             self.volume == other.volume
         )
+
+    @validates("symbol")
+    def _validate_symbol(self, key, symb):
+        self.is_symbol_valid(symb)
+        return symb
+
+    @classmethod
+    def is_symbol_valid(cls, symb):
+        if symb not in cls.Symbols.as_set(codes_only=True) and symb not in cls.Symbols.as_set():
+            raise SymbolUndefinedError(symb)
+
+    def to_dict(self, all_str: Optional[bool] = True):
+        res = dict(self.__dict__)
+        # Addtional SQLAlchemy Model attribute
+        del res["_sa_instance_state"]
+        if all_str:
+            if not isinstance(res["symbol"], str):
+                res["symbol"] = res["symbol"].name
+        return res
 
 
 class FinancialDataSerializer:
