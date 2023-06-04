@@ -1,3 +1,7 @@
+"""In order to avoid sticky stituations, this file adds current directory to path.
+
+    It also holds the application name and version.
+"""
 import sys
 import os
 

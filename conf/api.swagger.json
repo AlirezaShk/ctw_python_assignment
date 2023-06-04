@@ -1,0 +1,281 @@
+{
+    "swagger": "2.0",
+    "basePath": "/api",
+    "paths": {
+        "/financial_data": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Example of Successful Response.",
+                        "schema": {
+                            "$ref": "#/definitions/Response%3A%3AListFinancialData"
+                        }
+                    }
+                },
+                "operationId": "get_financial_data_view",
+                "parameters": [
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "type": "string",
+                        "format": "date",
+                        "description": "In format of YYYY-MM-DD"
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "type": "string",
+                        "format": "date",
+                        "description": "In format of YYYY-MM-DD"
+                    },
+                    {
+                        "name": "symbol",
+                        "in": "query",
+                        "type": "string",
+                        "enum": [
+                            "IBM",
+                            "AAPL"
+                        ]
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10000,
+                        "default": 5
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10000,
+                        "default": 1
+                    },
+                    {
+                        "name": "X-Fields",
+                        "in": "header",
+                        "type": "string",
+                        "format": "mask",
+                        "description": "An optional fields mask"
+                    }
+                ],
+                "tags": [
+                    "financial_api"
+                ]
+            }
+        },
+        "/statistics": {
+            "get": {
+                "responses": {
+                    "200": {
+                        "description": "Example of Successful Response.",
+                        "schema": {
+                            "$ref": "#/definitions/Response%3A%3AGetStatistics"
+                        }
+                    }
+                },
+                "operationId": "get_statistics_view",
+                "parameters": [
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "type": "string",
+                        "format": "date",
+                        "required": true,
+                        "description": "In format of YYYY-MM-DD"
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "type": "string",
+                        "format": "date",
+                        "required": true,
+                        "description": "In format of YYYY-MM-DD"
+                    },
+                    {
+                        "name": "symbol",
+                        "in": "query",
+                        "type": "string",
+                        "required": true,
+                        "enum": [
+                            "IBM",
+                            "AAPL"
+                        ]
+                    },
+                    {
+                        "name": "X-Fields",
+                        "in": "header",
+                        "type": "string",
+                        "format": "mask",
+                        "description": "An optional fields mask"
+                    }
+                ],
+                "tags": [
+                    "financial_api"
+                ]
+            }
+        }
+    },
+    "info": {
+        "title": "ctw_project REST API",
+        "version": "0.1.0"
+    },
+    "produces": [
+        "application/json"
+    ],
+    "consumes": [
+        "application/json"
+    ],
+    "tags": [
+        {
+            "name": "financial_api",
+            "description": "Operations on Financial Data"
+        }
+    ],
+    "definitions": {
+        "Response::ListFinancialData": {
+            "allOf": [
+                {
+                    "$ref": "#/definitions/ExtraInformation"
+                },
+                {
+                    "properties": {
+                        "data": {
+                            "$ref": "#/definitions/Model::FinancialDataSummary"
+                        },
+                        "pagination": {
+                            "$ref": "#/definitions/Pagination"
+                        }
+                    },
+                    "type": "object"
+                }
+            ]
+        },
+        "ExtraInformation": {
+            "properties": {
+                "info": {
+                    "$ref": "#/definitions/ErrorMessage"
+                }
+            },
+            "type": "object"
+        },
+        "ErrorMessage": {
+            "required": [
+                "error"
+            ],
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "default": "",
+                    "example": ""
+                }
+            },
+            "type": "object"
+        },
+        "Model::FinancialDataSummary": {
+            "properties": {
+                "symbol": {
+                    "type": "string",
+                    "example": "IBM"
+                },
+                "date": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2023-06-04"
+                },
+                "open_price": {
+                    "type": "number",
+                    "example": 4.0
+                },
+                "close_price": {
+                    "type": "number",
+                    "example": 32.0
+                },
+                "volume": {
+                    "type": "integer",
+                    "example": 83
+                }
+            },
+            "type": "object"
+        },
+        "Pagination": {
+            "required": [
+                "count",
+                "limit",
+                "page",
+                "pages"
+            ],
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "pages": {
+                    "type": "integer"
+                }
+            },
+            "type": "object"
+        },
+        "Response::GetStatistics": {
+            "allOf": [
+                {
+                    "$ref": "#/definitions/ExtraInformation"
+                },
+                {
+                    "properties": {
+                        "data": {
+                            "$ref": "#/definitions/Model::StatisticsDataSummary"
+                        }
+                    },
+                    "type": "object"
+                }
+            ]
+        },
+        "Model::StatisticsDataSummary": {
+            "properties": {
+                "start_date": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2023-06-04"
+                },
+                "end_date": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2023-06-04"
+                },
+                "symbol": {
+                    "type": "string",
+                    "example": "IBM"
+                },
+                "average_daily_open_price": {
+                    "type": "number",
+                    "example": 25.0
+                },
+                "average_daily_close_price": {
+                    "type": "number",
+                    "example": 37.0
+                },
+                "average_daily_volume": {
+                    "type": "number",
+                    "example": 3.0
+                }
+            },
+            "type": "object"
+        }
+    },
+    "responses": {
+        "ParseError": {
+            "description": "When a mask can't be parsed"
+        },
+        "MaskError": {
+            "description": "When any error occurs on mask"
+        }
+    }
+}
