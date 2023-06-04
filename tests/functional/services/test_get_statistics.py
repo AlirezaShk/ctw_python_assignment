@@ -46,10 +46,10 @@ class TestGetStatisticsService:
         paginated_results.items = [FDFactory.mock() for _ in range(3)]
         symbol = FDFactory.rand_symb().name
         for i in range(1, 4):
-            paginated_results.items[i-1].symbol = symbol
-            paginated_results.items[i-1].open_price = float(i)  # sum = 6, mean = 2.0
-            paginated_results.items[i-1].close_price = float(i**2)  # sum = 14, mean = 4.667
-            paginated_results.items[i-1].volume = i**3  # sum = 36, mean = 12.0
+            paginated_results.items[i - 1].symbol = symbol
+            paginated_results.items[i - 1].open_price = float(i)  # sum = 6, mean = 2.0
+            paginated_results.items[i - 1].close_price = float(i**2)  # sum = 14, mean = 4.667
+            paginated_results.items[i - 1].volume = i**3  # sum = 36, mean = 12.0
         paginated_results.next = (lambda: next_page)
         res = calc_mean(paginated_results, columns=['symbol', 'open_price', 'close_price', 'volume'])
         assert abs(res.iloc[0]["open_price"] - 2.0) <= 0.0001

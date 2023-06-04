@@ -1,6 +1,6 @@
 from lib.logging import Loggable
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict
 from model import FinancialData
 from conf.settings import MAX_BULK_OPERATIONS
 import pandas as pd
