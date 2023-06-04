@@ -11,12 +11,17 @@ from flask_cors import CORS
 from flask_caching import Cache
 
 
-dotenv.load_dotenv()
+env_path = ".env.prod" if APP_ENV == 'prod' else None
+dotenv.load_dotenv(env_path)
+
+# TODO: Migrate from static application creation to Application Creator Factory design.
+# This will supply the application with a flexible configurable feature.
 
 # Flask Initialization
 app = Flask(f"{__proj_name__}")
 app.config['OPENAPI_VERSION'] = '3.0.2'
-CORS(app, origins=os.getenv("ALLOWED_HOSTS", "*").split(","))
+if APP_ENV == 'prod':
+    CORS(app, origins=os.getenv("ALLOWED_HOSTS", "*").split(","))
 api = Api(
     app,
     title=f"{__proj_name__} REST API",

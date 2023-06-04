@@ -8,12 +8,12 @@ services:
   api:
     build:
       context: .
-      dockerfile: conf/containers/dev/py/Dockerfile
+      dockerfile: conf/containers/prod/py/Dockerfile
     container_name: ${PROJECT_NAME}-backend
     ports:
       - ${SERVER_PORT}:${SERVER_PORT}
     env_file:
-      - .env
+      - .env.prod
     command: python __main__.py
     volumes:
       - ./:${CONTAINER_WORKSPACE}
@@ -29,6 +29,8 @@ services:
     container_name: ${PROJECT_NAME}-db
     ports:
       - ${DB_CONTAINER_PORT}:3306
+    env_file:
+      - .env.prod
     environment:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
@@ -49,5 +51,5 @@ services:
           "-c",
           "echo > /dev/tcp/localhost/3306"
         ]
-      interval: 1s
+      interval: 3s
     restart: always
