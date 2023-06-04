@@ -5,6 +5,13 @@ from werkzeug.exceptions import HTTPException
 
 
 class Loggable:
+    """Logging decorator. Logs the input and output of functions.
+
+    Example:
+        @Loggable("main")
+        def print_h(s):
+            print(f"Hello {s}!")
+    """
     def __init__(self, class_name):
         self.logger = logging.getLogger(class_name)
 
@@ -20,12 +27,21 @@ class Loggable:
         return wrapper
 
 
-# @Loggable("main")
-# def print_h(s):
-#     print(f"Hello {s}!")
-
-
 class BasicErrorHandler(Loggable):
+    """Logging and error handling decorator.
+
+    Does 3 functionalities:
+        1. Logs the input and output of functions (like Loggable).
+        2. Catches only the `expectedErrClass` errors.
+        3. Rethrows the errors as the `rethrow_as` type.
+
+    Example:
+        @BasicErrorHandler(package_name="main", expectedErrClass=KeyError, rethrow=ValidationError)
+        def say_hi(mode: int = -1):
+            if (mode == 0): raise BaseException()
+            elif (mode == 1): raise KeyError()
+            else: print("hi")
+    """
     def __init__(self, package_name: str, expectedErrClass: type, rethrow_as: Optional[type] = None):
         super().__init__(package_name)
         self.expectedErrClass = expectedErrClass
@@ -47,13 +63,17 @@ class BasicErrorHandler(Loggable):
         return wrapper
 
 
-# @BasicErrorHandler(package_name="main", expectedErrClass=KeyError, rethrow=False)
-# def say_hi(mode: int = -1):
-#     if (mode == 0): raise BaseException()
-#     elif (mode == 1): raise KeyError()
-#     else: print("hi")
-
 class APIErrorHandler(Loggable):
+    """Logging and error handling decorator, suited for API results.
+
+    Functions more or less like `BasicErrorHandler`. The improvements are that:
+        1. Aborts the application if the `expectedErrClass` is caught with the provied `code` and `message`.
+            It also decorates the `HTTPException` that is raised by the `flask_restx.errors.abort` method;
+            it formats the returning message to the client-side according to the standards provided by
+            the project. (Turns client response format to {"info": {"error": <message>}})
+        2. If the caught error is a `HTTPException`, it won't decorate the message of it further.
+
+    """
     def __init__(self, package_name: str, expectedErrClass: type, code: int, message: Optional[str] = None):
         super().__init__(package_name)
         self.expectedErrClass = expectedErrClass

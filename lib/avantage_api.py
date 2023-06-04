@@ -9,6 +9,10 @@ from conf.settings import DEFAULT_DATE_FMT
 
 
 class DailyTimeSeriesRecord:
+    """Represents the DailyTImeSeriesData of AlphaVantageAPI.
+
+    Refer to https://www.alphavantage.co/documentation/#dailyadj.
+    """
     MAP_KEYS = {
         "open_price": "1. open",
         "close_price": "4. close",
@@ -26,11 +30,17 @@ class DailyTimeSeriesRecord:
     def to_model(self) -> FinancialData:
         return FinancialData(**self.data)
 
-    def to_dict(self):
-        return dict(self.data)
+    def to_dict(self) -> Dict:
+        return self.to_model().to_dict()
 
 
 class AlphaVantageAPI:
+    """Represents the AlphaVantageAPI reachable by: https://www.alphavantage.co/documentation
+
+    Currently the only funcntion that is defined (and set as default) is `TIME_SERIES_DAILY_ADJUSTED`.
+    The valid symbols are currently taken dynamically from the FinancialData.Symbols Enum. This
+    could be adjusted as necessary.
+    """
     DEFAULT_FUNC = "TIME_SERIES_DAILY_ADJUSTED"
     VALID_SYMBOLS = FinancialData.Symbols
     DEPRECATION_LIMIT_DAYS = 14
@@ -58,7 +68,12 @@ class AlphaVantageAPI:
     @Loggable("AlphaVantageAPI")
     def get_biweekly_data(self, symbol: str) -> List[FinancialData]:
         symbol_code = self._standardize_symbol(symbol)
-        time_series_data = self._get_daily_data_json(symbol_code)[self.FUNC_DATA_KEY[self.func]]
+        data = self._get_daily_data_json(symbol_code)
+        if not data:
+            return []
+        time_series_data = data[self.FUNC_DATA_KEY[self.func]]
+        if not time_series_data:
+            return []
         date_cursor = datetime.now()
         res = []
         parser = self._get_parser()
@@ -67,9 +82,10 @@ class AlphaVantageAPI:
             try:
                 res.append(
                     parser(record=time_series_data[key],
-                           date=date_cursor, symbol=symbol_code).to_dict()
+                           date=date_cursor, symbol=symbol_code).to_model()
                 )
-            except KeyError: pass
+            except KeyError:
+                pass
             date_cursor -= timedelta(days=1)
         return res
 

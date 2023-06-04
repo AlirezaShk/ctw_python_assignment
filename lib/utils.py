@@ -13,4 +13,4 @@ def load_help_messages() -> Dict[str, str]:
 
 
 def load_test_fixture(name: str) -> Dict[str, str]:
-    return json.load(open(Path(TEST_FIXTURES_DIR, f"{name}"), "r"))
+    return open(Path(TEST_FIXTURES_DIR, f"{name}"), "r")
