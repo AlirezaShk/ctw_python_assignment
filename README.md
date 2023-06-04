@@ -11,6 +11,7 @@ For more information on the API you can refer to the Swagger generate OpenAPI do
 ## Commands
 
 **Start Application**
+
 ```
 docker compose -f ./docker-compose.prod.yml build
 docker compose -f ./docker-compose.prod.yml up -d
@@ -19,11 +20,13 @@ docker compose -f ./docker-compose.prod.yml up -d
 The following commands must all be used inside the `backend` container.
 
 **Run Tests**
+
 ```
 pytest -vs
 ```
 
 **Fetch Last 2 Weeks Data from AlphaVantageAPI**
+
 ```
 python get_raw_data.py
 ```
@@ -68,6 +71,7 @@ I created the relevant test files and test cases for the application in the `tes
 ---
 
 **Utils**
+
 Python native logger was created and separate files dedicated to the runtime environment were used. Core procedures all are logged to the `data/log/*.log`.
 
 `data` directory contains all the data used by the application:
@@ -107,12 +111,14 @@ Also for API Specifications, Swagger OpenAPI Documentation has been used (genera
 ### Within Scope
 
 **High Priority**
+
 - Decorate _all_ responses from the API calls to adhere to the desired response format.\
     At the current state of the application, if there's an input validation error, the Flask-RESTX framework will respond with an automatic format and there's no error message decoration. This could probably be fixed with more tweaking but it was not pursued due to time restrictions.
 - Decorate _404 not found_ responses to the endpoints that are not defined, and to the endpoints that raise it due to content not found.
 - Migrate from static application creation to Application Creator Factory design. This will supply the application with a flexible configurable feature. More on that [here](https://flask.palletsprojects.com/en/2.3.x/patterns/appfactories/?highlight=factory). This design pattern was not used for the current project because of time restrictions.
 
 **Others**
+
 - Attend to _TODO_ tasks that are marked in comments throughout the project.
 - Add test cases for the `lib.utils`, `lib.db` modules.
 - Fix the `bulk_upsert` for `lib.db.SQLite` Database class to enable `bulk_upsert` from DEV ENV.
