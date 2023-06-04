@@ -4,6 +4,7 @@ from lib.avantage_api import AlphaVantageAPI, DailyTimeSeriesRecord
 from lib.exceptions import SymbolUndefinedError
 from random import choice as rsample
 from tests.factories.avantage_resp import DailyTimeSeriesRecords as DTSRsFactory
+from model import FinancialData
 import requests
 
 client = AlphaVantageAPI('sample', func="TIME_SERIES_DAILY_ADJUSTED")
@@ -59,19 +60,28 @@ def test_get_parser():
 
 @mock.patch('lib.avantage_api.AlphaVantageAPI._get_daily_data_json',
             return_value=DTSRsFactory.mock())
-def test_get_biweekly_data(*args, **kwargs):
+def test_get_biweekly_data_ok(*args, **kwargs):
     subject = (lambda sym: client.get_biweekly_data(sym))
     sym = sample_symbol()
     for s in [sym, sym.name]:
         res = subject(s)
         assert len(res) == 2
         for fd in res:
-            assert isinstance(fd, dict)
-            assert fd["updated_at"] is not None
-            assert fd["date"] is not None
-            assert fd["open_price"] is not None
-            assert fd["close_price"] is not None
-            assert fd["symbol"] == sym.name
-            with pytest.raises(KeyError):
-                assert fd["id"] is None
-                assert fd["created_at"] is None
+            assert isinstance(fd, FinancialData)
+            assert fd.updated_at is not None
+            assert fd.date is not None
+            assert fd.open_price is not None
+            assert fd.close_price is not None
+            assert fd.symbol == sym.name
+            assert fd.id is None
+            assert fd.created_at is None
+
+
+@mock.patch('lib.avantage_api.AlphaVantageAPI._get_daily_data_json',
+            return_value=[])
+def test_get_biweekly_data_empty(*args, **kwargs):
+    subject = (lambda sym: client.get_biweekly_data(sym))
+    sym = sample_symbol()
+    for s in [sym, sym.name]:
+        res = subject(s)
+        assert len(res) == 0
